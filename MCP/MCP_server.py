@@ -27,6 +27,7 @@ Commande : \"{command}\"
 
 def parse_and_execute(command: str) -> str:
     lowered = command.lower()
+
     if "readme" in lowered:
         import re
         match = re.search(r"readme\s*(.*)", command, re.IGNORECASE)
@@ -35,9 +36,6 @@ def parse_and_execute(command: str) -> str:
             return "Précisez la spécification du README à générer."
         content = generate_readme(spec)
         return save_readme(content)
-
-    # reste inchangé...
-
 
     try:
         to, subject, body = extract_email_data(command)
