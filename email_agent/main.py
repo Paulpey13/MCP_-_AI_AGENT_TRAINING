@@ -4,6 +4,7 @@ import requests
 from dotenv import load_dotenv
 import smtplib
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 load_dotenv()
 
@@ -12,6 +13,8 @@ EMAIL = os.getenv("EMAIL_USERNAME")
 PASSWORD = os.getenv("EMAIL_PASSWORD")
 SMTP_SERVER = os.getenv("EMAIL_SMTP", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("EMAIL_PORT", 587))
+NAME = os.getenv("NAME")
+
 
 
 def mistral_chat_completion(prompt: str):
@@ -21,7 +24,7 @@ def mistral_chat_completion(prompt: str):
         "Content-Type": "application/json",
     }
     data = {
-    "model": "mistral-small-latest",
+    "model": "mistral-large-latest",
     "messages": [{"role": "user", "content": prompt}],
     "temperature": 0.5,
     }
@@ -34,16 +37,30 @@ def mistral_chat_completion(prompt: str):
     return resp.json()["choices"][0]["message"]["content"]
 
 
+
 def send_email(to, subject, body):
-    msg = MIMEText(body)
+    msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = EMAIL
     msg["To"] = to
+
+    # Clean newlines and create HTML version
+    text_body = body.replace("\\n", "\n")
+    html_body = "<html><body><p>" + text_body.replace("\n", "<br>") + "</p></body></html>"
+
+    part1 = MIMEText(text_body, "plain")
+    part2 = MIMEText(html_body, "html")
+
+    msg.attach(part1)
+    msg.attach(part2)
+
     with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
         server.starttls()
         server.login(EMAIL, PASSWORD)
         server.sendmail(EMAIL, [to], msg.as_string())
     return f"Email sent to {to} with subject '{subject}'"
+
+
 
 
 def parse_and_execute(command):
@@ -54,6 +71,7 @@ Given this instruction: "{command}", extract:
 - the recipient's email address
 - a smart subject line
 - a polite and full email body that fits the request
+- Sign with the name {NAME}
 
 Respond in this JSON format:
 {{
